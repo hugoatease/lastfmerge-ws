@@ -37,7 +37,7 @@ def appendsig(url):
     sig = makesig(url)
     return url + '&api_sig=' + sig
 
-def jsonfetch(url, payload = None, method = None):
+def jsonfetch(url, payload = None, method = urlfetch.GET):
     error = 0
     ok = False
     while ok == False and error < 3:
