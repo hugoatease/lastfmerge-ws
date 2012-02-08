@@ -6,6 +6,8 @@ from google.appengine.ext import db
 from google.appengine.api import urlfetch
 from urllib import urlencode, quote
 import simplejson
+import logging
+
 app = bottle.Bottle()
 bottle.debug(True)
 
@@ -99,7 +101,7 @@ def do(servicetoken):
         
         payload['api_sig'] = common.makesig(url=None, params=payload)
         payload = urlencode(payload)
-        return str( urlfetch.fetch('http://ws.audioscrobbler.com/2.0/', payload = payload, method= urlfetch.POST).content )
+        logging.debug( str( urlfetch.fetch('http://ws.audioscrobbler.com/2.0/', payload = payload, method= urlfetch.POST).content ) )
     
     except:
         return {'Message' : 'ERROR : Wrong token. Please retry the authentication process at http://lastfmerge.appspot.com/auth', 'Error' : True}
