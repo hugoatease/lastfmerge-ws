@@ -9,7 +9,6 @@ import simplejson
 import logging
 
 app = bottle.Bottle()
-bottle.debug(True)
 
 class Users(db.Model):
     token = db.StringProperty()
@@ -67,7 +66,7 @@ def scrobble(servicetoken):
             i = 0
             while len(scrobbles) != 0:
                 part = scrobbles[0:10]
-                taskqueue.add(url='/task/scrobble/' + servicetoken, method='POST', params = {'scrobbles' : simplejson.dumps(part)})
+                taskqueue.add(queue_name='lastfm', url='/task/scrobble/' + servicetoken, method='POST', params = {'scrobbles' : simplejson.dumps(part)})
                 for scrobble in part:
                     scrobbles.remove(scrobble)
                 i = i +1
@@ -84,7 +83,7 @@ def do(servicetoken):
         result = q.fetch(1)[0]
         sk = result.session
         scrobbles = simplejson.loads(bottle.request.forms.scrobbles)
-        payload = {'method' : 'track.scrobble', 'api_key' : config.lastfm['Key'], 'sk' : sk, 'format' : 'json'}
+        payload = {'method' : 'track.scrobble', 'format' : 'json', 'api_key' : config.lastfm['Key'], 'sk' : sk}
         i = 0
         
         parsed_scrobbles = list()
