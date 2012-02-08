@@ -51,6 +51,18 @@ def jsonfetch(url, payload = None, method = urlfetch.GET):
     else:
         return None
 
+def unicodefilter(dic):
+    raised = False
+    for key in dic.keys():
+        try:
+            dic[key] = str(dic[key])
+        except UnicodeEncodeError:
+            raised = True
+    if raised:
+        return None
+    else:
+        return dic
+
 class Token:
     def __init__(self, length=50, capitals = True):
         self.length = length
