@@ -98,8 +98,8 @@ def scrobble(servicetoken):
                 return {'Message' : 'Inputed scrobbles have been planned for submission.', 'Error' : False}
             elif remove == True:
                 for scrobble in scrobbles:
-                    taskqueue.add(queue_name='lastfm', url='/task/remove/' + servicetoken + '/' + scrobble['Artist'] + '/' + scrobble['Name'] + '/' + scrobble['Time'], method='GET')
-                    return {'Message' : 'Inputed scrobbles have been planned for deletion.', 'Error' : False}
+                    taskqueue.add(queue_name='lastfm', url=quote('/task/remove/' + servicetoken + '/' + scrobble['Artist'] + '/' + scrobble['Name'] + '/' + scrobble['Time']), method='GET')
+                return {'Message' : 'Inputed scrobbles have been planned for deletion.', 'Error' : False}
 
     except:
         return {'Message' : 'ERROR : Wrong token. Please retry the authentication process at http://lastfmerge.appspot.com/auth', 'Error' : True}
