@@ -25,18 +25,33 @@ def lastauth():
 
 @app.route('/callback')
 def lastcallback():
+    error = False
     token = bottle.request.query.token
     
     data = common.jsonfetch(common.appendsig('http://ws.audioscrobbler.com/2.0/?method=auth.getSession&format=json&api_key=' + config.lastfm['Key'] + '&token=' + token))
 
-    username = data['session']['name']
-    session = data['session']['key']
-    servicetoken = common.Token(length=10).make()
+    try:
+        username = data['session']['name']
+        session = data['session']['key']
+    except KeyError:
+        error = True
     
-    userentity = Users(token = servicetoken, username = username, session = session)
-    userentity.put()
+    if error:
+        return '''<h3>Last.fmerge - Last.Fm Api Authentication</h3><p><span style="color: red;">ERROR</span> Authentication has failed, please retry.</p>'''
+    else:
+        servicetoken = common.Token(length=10).make()
+        
+        q = Users().all(keys_only = True)
+        q.filter('username =', username)
+        old = q.fetch(50)
+        for key in old:
+            item = Users().get(key)
+            item.delete()
     
-    return '''<h3>Last.fmErge - Last.Fm Api Authentication</h3><p>Authentication with the Last.fm API has succeed. Now you can return to the desktop application and give it this code :</p><p><b>''' + servicetoken + '''</b></p>'''
+        userentity = Users(token = servicetoken, username = username, session = session)
+        userentity.put()
+        
+        return '''<h3>Last.fmerge - Last.Fm Api Authentication</h3><p>Authentication with the Last.fm API has succeed. Now you can return to the desktop application and give it this code :</p><p><b>''' + servicetoken + '''</b></p>'''
     
 @app.route('/check/:servicetoken')
 def check(servicetoken):
