@@ -66,6 +66,15 @@ def check(servicetoken):
 @app.route('/scrobble/:servicetoken', method='POST')
 def scrobble(servicetoken):
     try:
+        try:
+            mode = bottle.request.forms.mode
+        except:
+            mode = None
+        if mode == None or mode == 'scrobble':
+            remove = False
+        elif mode == 'remove':
+            remove = True
+        
         q = Users().all()
         q.filter('token =', servicetoken)
     
@@ -78,20 +87,25 @@ def scrobble(servicetoken):
                 valid = False
                 return {'Message' : 'ERROR : Inputed scrobble data is unrecognised. It seems that scrobble #'+str(i) + 'is invalid.'}
         if valid:
-            i = 0
-            while len(scrobbles) != 0:
-                part = scrobbles[0:10]
-                taskqueue.add(queue_name='lastfm', url='/task/scrobble/' + servicetoken, method='POST', params = {'scrobbles' : simplejson.dumps(part)})
-                for scrobble in part:
-                    scrobbles.remove(scrobble)
-                i = i +1
-            return {'Message' : 'Inputed scrobbles have been planned for submission.', 'Error' : False}
+            if remove == False:
+                i = 0
+                while len(scrobbles) != 0:
+                    part = scrobbles[0:10]
+                    taskqueue.add(queue_name='lastfm', url='/task/scrobble/' + servicetoken, method='POST', params = {'scrobbles' : simplejson.dumps(part)})
+                    for scrobble in part:
+                        scrobbles.remove(scrobble)
+                    i = i +1
+                return {'Message' : 'Inputed scrobbles have been planned for submission.', 'Error' : False}
+            elif remove == True:
+                for scrobble in scrobbles:
+                    taskqueue.add(queue_name='lastfm', url='/task/remove/' + servicetoken + '/' + scrobble['Artist'] + '/' + scrobble['Name'] + '/' + scrobble['Time'], method='GET')
+                    return {'Message' : 'Inputed scrobbles have been planned for deletion.', 'Error' : False}
 
     except:
         return {'Message' : 'ERROR : Wrong token. Please retry the authentication process at http://lastfmerge.appspot.com/auth', 'Error' : True}
 
 @app.route('/task/scrobble/:servicetoken', method='POST')
-def do(servicetoken):
+def doscrobble(servicetoken):
     try:
         q = Users().all()
         q.filter('token =', servicetoken)
@@ -119,5 +133,23 @@ def do(servicetoken):
     
     except:
         return {'Message' : 'ERROR : Wrong token. Please retry the authentication process at http://lastfmerge.appspot.com/auth', 'Error' : True}
+
+@app.route('/task/remove/:servicetoken/:artist/:name/:timestamp')
+def doremove(servicetoken, artist, name, timestamp):
+    q = Users().all()
+    q.filter('token =', servicetoken)
+    result = q.fetch(1)[0]
+    sk = result.session
+    payload = {'method' : 'library.removeScrobble', 'format' : 'json', 'api_key' : config.lastfm['Key'], 'sk' : sk}
+    
+    if common.unicodefilter( {'Artist' : artist, 'Name' : name, 'Time' : timestamp} ) != None:
+        payload['artist'] = artist
+        payload['track'] = name
+        payload['timestamp'] = timestamp
+        payload['api_sig'] = common.makesig(url=None, params=payload)
+        payload = urlencode(payload)
+        logging.debug( str( urlfetch.fetch('http://ws.audioscrobbler.com/2.0/', payload = payload, method= urlfetch.POST).content ) )
+    else:
+        logging.debug('Unicode error : ' + artist + ' - ' + name)
 
 bottle.run(app, server = 'gae')
