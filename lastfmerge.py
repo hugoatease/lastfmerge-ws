@@ -122,8 +122,8 @@ def doscrobble(servicetoken):
                 parsed_scrobbles.append(converted)
     
         for scrobble in parsed_scrobbles:
-            payload[ 'artist[' + str(i) + ']' ] = quote(scrobble['Artist'])
-            payload[ 'track[' + str(i) + ']' ] = quote(scrobble['Name'])
+            payload[ 'artist[' + str(i) + ']' ] = scrobble['Artist']
+            payload[ 'track[' + str(i) + ']' ] = scrobble['Name']
             payload[ 'timestamp[' + str(i) + ']' ] = scrobble['Time']
             i = i +1
         
