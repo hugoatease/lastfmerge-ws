@@ -112,7 +112,7 @@ def doscrobble(servicetoken):
         result = q.fetch(1)[0]
         sk = result.session
         scrobbles = simplejson.loads(bottle.request.forms.scrobbles)
-        payload = {'method' : 'track.scrobble', 'format' : 'json', 'api_key' : config.lastfm['Key'], 'sk' : sk}
+        payload = {'method' : 'track.scrobble', 'api_key' : config.lastfm['Key'], 'sk' : sk}
         i = 0
         
         parsed_scrobbles = list()
@@ -129,7 +129,7 @@ def doscrobble(servicetoken):
         
         payload['api_sig'] = common.makesig(url=None, params=payload)
         payload = urlencode(payload)
-        logging.debug( str( urlfetch.fetch('http://ws.audioscrobbler.com/2.0/', payload = payload, method= urlfetch.POST).content ) )
+        logging.debug( str( urlfetch.fetch('http://ws.audioscrobbler.com/2.0/?format=json', payload = payload, method= urlfetch.POST).content ) )
     
     except:
         return {'Message' : 'ERROR : Wrong token. Please retry the authentication process at http://lastfmerge.appspot.com/auth', 'Error' : True}
@@ -140,7 +140,7 @@ def doremove(servicetoken, artist, name, timestamp):
     q.filter('token =', servicetoken)
     result = q.fetch(1)[0]
     sk = result.session
-    payload = {'method' : 'library.removeScrobble', 'format' : 'json', 'api_key' : config.lastfm['Key'], 'sk' : sk}
+    payload = {'method' : 'library.removeScrobble', 'api_key' : config.lastfm['Key'], 'sk' : sk}
     
     if common.unicodefilter( {'Artist' : artist, 'Name' : name, 'Time' : timestamp} ) != None:
         payload['artist'] = artist
@@ -148,7 +148,7 @@ def doremove(servicetoken, artist, name, timestamp):
         payload['timestamp'] = timestamp
         payload['api_sig'] = common.makesig(url=None, params=payload)
         payload = urlencode(payload)
-        logging.debug( str( urlfetch.fetch('http://ws.audioscrobbler.com/2.0/', payload = payload, method= urlfetch.POST).content ) )
+        logging.debug( str( urlfetch.fetch('http://ws.audioscrobbler.com/2.0/?format=json', payload = payload, method= urlfetch.POST).content ) )
     else:
         logging.debug('Unicode error : ' + artist + ' - ' + name)
 
