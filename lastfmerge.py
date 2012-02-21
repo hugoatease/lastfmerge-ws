@@ -79,6 +79,7 @@ def scrobble(servicetoken):
         q.filter('token =', servicetoken)
     
         result = q.fetch(1)[0]
+        sk = result.session
         scrobbles = simplejson.loads(bottle.request.forms.scrobbles)
         valid = True
         i = 0
@@ -98,7 +99,7 @@ def scrobble(servicetoken):
                 return {'Message' : 'Inputed scrobbles have been planned for submission.', 'Error' : False}
             elif remove == True:
                 for scrobble in scrobbles:
-                    taskqueue.add(queue_name='lastfm', url=quote('/task/remove/' + servicetoken + '/' + scrobble['Artist'] + '/' + scrobble['Name'] + '/' + scrobble['Time']), method='GET')
+                    taskqueue.add(queue_name='lastfm', url=quote('/task/remove/' + sk + '/' + scrobble['Artist'] + '/' + scrobble['Name'] + '/' + scrobble['Time']), method='GET')
                 return {'Message' : 'Inputed scrobbles have been planned for deletion.', 'Error' : False}
 
     except:
@@ -134,12 +135,8 @@ def doscrobble(servicetoken):
     except:
         return {'Message' : 'ERROR : Wrong token. Please retry the authentication process at http://lastfmerge.appspot.com/auth', 'Error' : True}
 
-@app.route('/task/remove/:servicetoken/:artist/:name/:timestamp')
-def doremove(servicetoken, artist, name, timestamp):
-    q = Users().all()
-    q.filter('token =', servicetoken)
-    result = q.fetch(1)[0]
-    sk = result.session
+@app.route('/task/remove/:sk/:artist/:name/:timestamp')
+def doremove(sk, artist, name, timestamp):
     payload = {'method' : 'library.removeScrobble', 'api_key' : config.lastfm['Key'], 'sk' : sk}
     
     if common.unicodefilter( {'Artist' : artist, 'Name' : name, 'Time' : timestamp} ) != None:
