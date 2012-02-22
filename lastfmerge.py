@@ -84,6 +84,9 @@ def scrobble(servicetoken):
         result = q.fetch(1)[0]
         sk = result.session
         userkey = result.key()
+        
+        if result.running == True:
+            return {'Message' : 'ERROR : Scrobbling operation in progress. Please try again later.\nYou should be notified on your shoutbox when running operation will be finished.', 'Error' : True}
 
         valid = True
         i = 0
