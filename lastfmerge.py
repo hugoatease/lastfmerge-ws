@@ -94,9 +94,10 @@ def scrobble(servicetoken):
         if valid:
             if remove == False:
                 i = 0
+                total = len(scrobbles)
                 while len(scrobbles) != 0:
                     part = scrobbles[0:10]
-                    taskqueue.add(queue_name='lastfm', url='/task/scrobble/' + str(userkey) + '/' + str( len(scrobbles)-1 -i ), method='POST', params = {'scrobbles' : simplejson.dumps(part)})
+                    taskqueue.add(queue_name='lastfm', url='/task/scrobble/' + str(userkey) + '/' + str( total-1 -i ), method='POST', params = {'scrobbles' : simplejson.dumps(part)})
                     for scrobble in part:
                         scrobbles.remove(scrobble)
                     i = i +1
