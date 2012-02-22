@@ -14,6 +14,9 @@ class Users(db.Model):
     token = db.StringProperty()
     username = db.StringProperty()
     session = db.StringProperty()
+    running = db.BooleanProperty()
+    total = db.IntegerProperty()
+    failed = db.IntegerProperty()
 
 @app.route('/')
 def index():
@@ -66,6 +69,7 @@ def check(servicetoken):
 @app.route('/scrobble/:servicetoken', method='POST')
 def scrobble(servicetoken):
     try:
+        scrobbles = simplejson.loads(bottle.request.forms.scrobbles)
         try:
             mode = bottle.request.forms.mode
         except:
@@ -77,10 +81,10 @@ def scrobble(servicetoken):
         
         q = Users().all()
         q.filter('token =', servicetoken)
-    
         result = q.fetch(1)[0]
         sk = result.session
-        scrobbles = simplejson.loads(bottle.request.forms.scrobbles)
+        userkey = result.key()
+
         valid = True
         i = 0
         for scrobble in scrobbles:
@@ -92,10 +96,13 @@ def scrobble(servicetoken):
                 i = 0
                 while len(scrobbles) != 0:
                     part = scrobbles[0:10]
-                    taskqueue.add(queue_name='lastfm', url='/task/scrobble/' + servicetoken, method='POST', params = {'scrobbles' : simplejson.dumps(part)})
+                    taskqueue.add(queue_name='lastfm', url='/task/scrobble/' + str(userkey) + '/' + str( len(scrobbles)-1 -i ), method='POST', params = {'scrobbles' : simplejson.dumps(part)})
                     for scrobble in part:
                         scrobbles.remove(scrobble)
                     i = i +1
+                user = Users.get(userkey)
+                user.running = True
+                user.put()
                 return {'Message' : 'Inputed scrobbles have been planned for submission.', 'Error' : False}
             elif remove == True:
                 for scrobble in scrobbles:
@@ -105,35 +112,35 @@ def scrobble(servicetoken):
     except:
         return {'Message' : 'ERROR : Wrong token. Please retry the authentication process at http://lastfmerge.appspot.com/auth', 'Error' : True}
 
-@app.route('/task/scrobble/:servicetoken', method='POST')
-def doscrobble(servicetoken):
-    try:
-        q = Users().all()
-        q.filter('token =', servicetoken)
-        result = q.fetch(1)[0]
-        sk = result.session
-        scrobbles = simplejson.loads(bottle.request.forms.scrobbles)
-        payload = {'method' : 'track.scrobble', 'api_key' : config.lastfm['Key'], 'sk' : sk}
-        i = 0
-        
-        parsed_scrobbles = list()
-        for scrobble in scrobbles:
-            converted = common.unicodefilter(scrobble)
-            if converted != None:
-                parsed_scrobbles.append(converted)
+@app.route('/task/scrobble/:userkey/:remaining', method='POST')
+def doscrobble(userkey, remaining):
+    remaining = int(remaining)
     
-        for scrobble in parsed_scrobbles:
-            payload[ 'artist[' + str(i) + ']' ] = scrobble['Artist']
-            payload[ 'track[' + str(i) + ']' ] = scrobble['Name']
-            payload[ 'timestamp[' + str(i) + ']' ] = scrobble['Time']
-            i = i +1
-        
-        payload['api_sig'] = common.makesig(url=None, params=payload)
-        payload = urlencode(payload)
-        logging.debug( str( urlfetch.fetch('http://ws.audioscrobbler.com/2.0/?format=json', payload = payload, method= urlfetch.POST).content ) )
+    user = Users.get( db.Key(userkey) )
+    sk = user.session
+    scrobbles = simplejson.loads(bottle.request.forms.scrobbles)
+    payload = {'method' : 'track.scrobble', 'api_key' : config.lastfm['Key'], 'sk' : sk}
+    i = 0
     
-    except:
-        return {'Message' : 'ERROR : Wrong token. Please retry the authentication process at http://lastfmerge.appspot.com/auth', 'Error' : True}
+    parsed_scrobbles = list()
+    for scrobble in scrobbles:
+        converted = common.unicodefilter(scrobble)
+        if converted != None:
+            parsed_scrobbles.append(converted)
+
+    for scrobble in parsed_scrobbles:
+        payload[ 'artist[' + str(i) + ']' ] = scrobble['Artist']
+        payload[ 'track[' + str(i) + ']' ] = scrobble['Name']
+        payload[ 'timestamp[' + str(i) + ']' ] = scrobble['Time']
+        i = i +1
+    
+    payload['api_sig'] = common.makesig(url=None, params=payload)
+    payload = urlencode(payload)
+    logging.debug( str( urlfetch.fetch('http://ws.audioscrobbler.com/2.0/?format=json', payload = payload, method= urlfetch.POST).content ) )
+    
+    if remaining == 0:
+        user.running = False
+        user.put()
 
 @app.route('/task/remove/:sk/:artist/:name/:timestamp')
 def doremove(sk, artist, name, timestamp):
