@@ -23,13 +23,12 @@ def index():
     bottle.redirect('https://github.com/hugoatease/lastfmerge')
 
 @app.route('/auth')
-def lastauth():
-    bottle.redirect('http://www.last.fm/api/auth/?cb=http://lastfmerge.appspot.com/callback&api_key=' + config.lastfm['Key'])
-
-@app.route('/callback')
 def lastcallback():
     error = False
     token = bottle.request.query.token
+    
+    if token == None or len(token) < 1:
+        bottle.redirect('http://www.last.fm/api/auth/?cb=http://lastfmerge.appspot.com/auth&api_key=' + config.lastfm['Key'])
     
     data = common.jsonfetch(common.appendsig('http://ws.audioscrobbler.com/2.0/?method=auth.getSession&format=json&api_key=' + config.lastfm['Key'] + '&token=' + token))
 
@@ -65,6 +64,17 @@ def check(servicetoken):
         return {'Username' : result.username}
     except:
         return {'Message' : 'ERROR : Wrong token. Please retry the authentication process at http://lastfmerge.appspot.com/auth', 'Error' : True}
+
+@app.route('/unregister/:servicetoken')
+def unregister(servicetoken):
+    try:
+        q = Users.all()
+        q.filter('token =', servicetoken)
+        result = q.fetch(1)[0]
+        result.delete()
+        return {'Message' : 'OK : Token successfully unregistered.', 'Error' : False}
+    except:
+        return {'Message' : 'ERROR : Unable to unregister token ' + servicetoken, 'Error' : True}
 
 @app.route('/scrobble/:servicetoken', method='POST')
 def scrobble(servicetoken):
