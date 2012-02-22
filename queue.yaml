@@ -2,6 +2,6 @@ queue:
 - name: lastfm
   rate: 5/s
   mode: push
-  max_concurrent_requests: 3
+  max_concurrent_requests: 5
   retry_parameters:
     task_retry_limit: 1
