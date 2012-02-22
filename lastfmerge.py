@@ -95,6 +95,9 @@ def scrobble(servicetoken):
             if remove == False:
                 i = 0
                 total = len(scrobbles)
+                result.total = total
+                result.failed = 0
+                result.put()
                 while len(scrobbles) != 0:
                     part = scrobbles[0:10]
                     taskqueue.add(queue_name='lastfm', url='/task/scrobble/' + str(userkey) + '/' + str( total-1 -i ), method='POST', params = {'scrobbles' : simplejson.dumps(part)})
@@ -137,7 +140,13 @@ def doscrobble(userkey, remaining):
     
     payload['api_sig'] = common.makesig(url=None, params=payload)
     payload = urlencode(payload)
-    logging.debug( str( urlfetch.fetch('http://ws.audioscrobbler.com/2.0/?format=json', payload = payload, method= urlfetch.POST).content ) )
+    result = urlfetch.fetch('http://ws.audioscrobbler.com/2.0/?format=json', payload = payload, method= urlfetch.POST).content
+    result = simplejson.loads(result)
+    ignored = int(result['scrobbles']['@attr']['ignored'])
+    
+    if ignored > 0:
+        user.failed = user.failed + 1
+        user.put()
     
     if remaining == 0:
         user.running = False
