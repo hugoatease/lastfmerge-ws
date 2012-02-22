@@ -107,7 +107,7 @@ def scrobble(servicetoken):
                 user = Users.get(userkey)
                 user.running = True
                 user.put()
-                return {'Message' : 'Inputed scrobbles have been planned for submission.', 'Error' : False}
+                return {'Message' : 'Inputed scrobbles have been planned for submission.\nResults will appear on your Last.fm shoutbox.', 'Error' : False}
             elif remove == True:
                 for scrobble in scrobbles:
                     taskqueue.add(queue_name='lastfm', url=quote('/task/remove/' + sk + '/' + scrobble['Artist'] + '/' + scrobble['Name'] + '/' + scrobble['Time']), method='GET')
@@ -151,6 +151,18 @@ def doscrobble(userkey, remaining):
     if remaining == 0:
         user.running = False
         user.put()
+        
+        username = user.username
+        failed = user.failed
+        total = user.total
+        done = total - failed
+        ratio = (done*100)/total
+        message = 'Last.fmerge at http://lastfmerge.appspot.com >>> ' + str(done) + '/' + str(total) + ' scrobbles have been imported ( ' + str(ratio) + '% ). ' + str(failed) + ' scrobbles couldn\'t be imported.'
+        payload = {'method' : 'user.shout', 'api_key' : config.lastfm['Key'], 'sk' : sk, 'user' : username, 'message' : message}
+        payload['api_sig'] = common.makesig(url=None, params=payload)
+        payload = urlencode(payload)
+        
+        urlfetch.fetch('http://ws.audioscrobbler.com/2.0/?format=json', payload = payload, method= urlfetch.POST)
 
 @app.route('/task/remove/:sk/:artist/:name/:timestamp')
 def doremove(sk, artist, name, timestamp):
