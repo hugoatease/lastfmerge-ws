@@ -20,11 +20,12 @@ class Users(db.Model):
 def index():
     bottle.redirect('https://github.com/hugoatease/lastfmerge')
 
+@app.route('/register')
 @app.route('/auth')
-def lastauth():
+def register():
     token = bottle.request.query.token
     if token == None or len(token) < 1:
-        bottle.redirect('http://www.last.fm/api/auth/?cb=http://lastfmerge.appspot.com/callback&api_key=' + config.lastfm['Key'])
+        bottle.redirect('http://www.last.fm/api/auth/?cb=http://lastfmerge.appspot.com/register&api_key=' + config.lastfm['Key'])
 
     data = common.jsonfetch(common.appendsig('http://ws.audioscrobbler.com/2.0/?method=auth.getSession&format=json&api_key=' + config.lastfm['Key'] + '&token=' + token))
 
@@ -47,6 +48,18 @@ def lastauth():
     user.put()
     
     return '''<h3>Last.fmerge - Last.Fm Api Authentication</h3><p>Authentication with the Last.fm API has succeed. Now you can return to the desktop application and give it this code :</p><p><b>''' + servicetoken + '''</b></p>'''
+
+@app.route('/unregister/:token')
+def unregister(token):
+    user = Users.all()
+    user.filter('token =', token)
+    try:
+        user = user.fetch(1)[0]
+    except:
+        return {'Message' : 'ERROR : Unable to register token ' + token + ' . If this error persists and the token seems to be valid, please contact the webservice\'s administrator.', 'Error' : True}
+    username = user.username
+    user.delete()
+    return {'Message' : 'Token associated with ' + username + ' has been deleted', 'Error' : False}
     
 @app.route('/check/:servicetoken')
 def check(servicetoken):
